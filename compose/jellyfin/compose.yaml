@@ -1,0 +1,14 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+
+    ports:
+      - "8096:8096"
+
+    volumes:
+      - /srv/homelab/appdata/jellyfin/config:/config
+      - /srv/homelab/appdata/jellyfin/cache:/cache
+      - /srv/media/movies:/media/movies:ro
+      - /srv/media/series:/media/series:ro
