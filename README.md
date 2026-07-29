@@ -79,3 +79,22 @@ Git does **not** store:
 - Logs
 - Cache
 - Temporary files
+---
+
+## Current Services
+
+| Service | Status | Purpose |
+|---|---|---|
+| Portainer | Running | Docker container management |
+| Jellyfin | Running | Media server |
+| qBittorrent | Running | Download client |
+
+## Media Directory Structure
+
+```text
+/srv/media/
+├── downloads/
+│   ├── complete/
+│   └── incomplete/
+├── movies/
+└── series/
