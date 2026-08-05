@@ -1,0 +1,56 @@
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Budapest
+      - WEBUI_PORT=8081
+      - TORRENTING_PORT=6881
+
+    volumes:
+      - /srv/homelab/appdata/qbittorrent:/config
+      - /srv/media/downloads:/downloads
+
+    ports:
+      - "8081:8081"
+      - "6881:6881"
+      - "6881:6881/udp"
+
+    restart: unless-stopped
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Budapest
+
+    volumes:
+      - /srv/homelab/appdata/prowlarr:/config
+
+    ports:
+      - "9696:9696"
+
+    restart: unless-stopped
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Budapest
+
+    volumes:
+      - /srv/homelab/appdata/radarr:/config
+      - /srv/media:/media
+      - /srv/media/downloads:/downloads
+
+    ports:
+      - "7878:7878"
+
+    restart: unless-stopped
