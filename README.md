@@ -98,3 +98,16 @@ Git does **not** store:
 │   └── incomplete/
 ├── movies/
 └── series/
+
+## Documentation
+
+Detailed project documentation is available in the `docs/` directory.
+
+| Document | Description |
+|----------|-------------|
+| media-stack.md | Automated media stack architecture and workflow |
+| docker.md | Docker and Compose notes |
+| jellyfin.md | Jellyfin installation and configuration |
+| networking.md | Home network topology and addressing |
+| learning-notes.md | Lessons learned during the project |
+| roadmap.md | Planned future improvements |
