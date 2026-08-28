@@ -2,134 +2,28 @@
 
 ## Purpose
 
-Prowlarr is the centralized indexer manager of the HomeLAB media stack.
+Prowlarr provides centralized indexer management for the HomeLAB media stack.
 
-Instead of configuring every indexer separately in Radarr, Sonarr, or future applications, Prowlarr manages them from a single location and synchronizes them automatically.
-
----
-
-## Responsibilities
-
-Prowlarr is responsible for:
-
-- Managing torrent indexers
-- Testing indexer connectivity
-- Synchronizing indexers with media applications
-- Managing API communication with supported ARR applications
-- Reducing duplicated configuration
+It manages tracker connections and synchronizes indexer configuration to Radarr and Sonarr.
 
 ---
 
 ## Service Information
 
 | Property | Value |
-|----------|-------|
+|---|---|
 | Container | prowlarr |
 | Image | lscr.io/linuxserver/prowlarr |
 | Host Port | 9696 |
 | Compose Project | media |
 
----
-
-## Communication
-
-Prowlarr communicates with:
-
-### Indexers
-
-Current:
+Web interface:
 
 ```text
-nCore
+http://192.168.31.10:9696
 ```
 
-Future:
-
-- Additional private trackers
-- Public indexers (if required)
-
----
-
-### Applications
-
-Current:
-
-```text
-Radarr
-```
-
-Future:
-
-```text
-Sonarr
-```
-
-Docker communication:
-
-```text
-http://radarr:7878
-```
-
-Future:
-
-```text
-http://sonarr:8989
-```
-
----
-
-## Synchronization
-
-Prowlarr pushes indexer configuration directly into supported ARR applications.
-
-Current synchronization:
-
-```text
-Prowlarr
-        │
-        ▼
-     Radarr
-```
-
-Future:
-
-```text
-          Prowlarr
-          /      \
-         ▼        ▼
-    Radarr     Sonarr
-```
-
-This ensures that indexers only need to be configured once.
-
----
-
-## Current Configuration
-
-Verified components:
-
-- nCore indexer
-- Radarr application
-- API communication
-- Full synchronization
-- Interactive search
-- Automatic search
-- RSS synchronization
-
----
-
-## Security
-
-Private tracker credentials are stored only inside Prowlarr.
-
-Git must never contain:
-
-- Username
-- Password
-- Cookies
-- API Keys
-
-Runtime configuration is stored under:
+Persistent configuration:
 
 ```text
 /srv/homelab/appdata/prowlarr
@@ -137,59 +31,73 @@ Runtime configuration is stored under:
 
 ---
 
-## Verification
-
-The following workflow was verified:
-
-1. Radarr requested a movie search.
-2. Prowlarr received the request.
-3. nCore returned matching releases.
-4. Prowlarr passed the results back to Radarr.
-5. Radarr successfully selected and downloaded the release.
-
----
-
-## Lessons Learned
-
-### Configure indexers only once
-
-Without Prowlarr every ARR application would require its own indexer configuration.
-
-With Prowlarr:
-
-- One configuration
-- Multiple applications
-- Easier maintenance
-
----
-
-### Docker networking
-
-Applications communicate using Docker service names.
-
-Example:
+## Integration
 
 ```text
-http://radarr:7878
+Trackers
+   │
+   ▼
+Prowlarr
+   │
+   ├──► Radarr
+   │
+   └──► Sonarr
 ```
 
-instead of fixed IP addresses.
+Prowlarr acts as the central point for indexer configuration instead of configuring trackers independently in each application.
+
+Radarr uses synchronized indexers for movie searches.
+
+Sonarr uses synchronized indexers for TV series searches.
 
 ---
 
-### Keep credentials centralized
+## Trackers
 
-All tracker credentials remain inside Prowlarr.
+The HomeLAB currently uses private tracker integrations through Prowlarr.
 
-Other applications receive only synchronized indexer definitions.
-
-This simplifies management and reduces duplicated configuration.
+Tracker credentials and authentication data are stored in application runtime configuration and are not committed to Git.
 
 ---
 
-## Related Documentation
+## Docker Configuration
 
-- overview.md
-- radarr.md
-- qbittorrent.md
-- troubleshooting.md
+Relevant container configuration:
+
+```yaml
+environment:
+  - PUID=1000
+  - PGID=1000
+  - TZ=Europe/Budapest
+
+volumes:
+  - /srv/homelab/appdata/prowlarr:/config
+
+ports:
+  - "9696:9696"
+```
+
+---
+
+## Network Design
+
+Prowlarr remains on the normal HomeLAB network.
+
+It is not routed through Proton VPN.
+
+Only qBittorrent torrent traffic is isolated behind Gluetun.
+
+Prowlarr communicates with Radarr and Sonarr as part of the normal media Docker stack.
+
+---
+
+## Current Status
+
+Prowlarr is deployed and running.
+
+Current functionality includes:
+
+- centralized indexer management
+- Radarr integration
+- Sonarr integration
+- private tracker support

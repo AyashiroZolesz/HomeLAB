@@ -1,7 +1,40 @@
 services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: gluetun
+
+    cap_add:
+      - NET_ADMIN
+
+    devices:
+      - /dev/net/tun:/dev/net/tun
+
+    environment:
+      - VPN_SERVICE_PROVIDER=custom
+      - VPN_TYPE=wireguard
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=protonvpn
+      - TZ=Europe/Budapest
+
+    volumes:
+      - /srv/homelab/appdata/gluetun/wireguard/wg0.conf:/gluetun/wireguard/wg0.conf:ro
+      - /srv/homelab/appdata/gluetun/tmp:/tmp/gluetun
+      - /srv/homelab/appdata/gluetun/update-qbit-port.sh:/gluetun/update-qbit-port.sh:ro
+
+    ports:
+      - "8081:8081"
+
+    restart: unless-stopped
+
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
+
+    network_mode: "service:gluetun"
+
+    depends_on:
+      gluetun:
+        condition: service_started
 
     environment:
       - PUID=1000
@@ -13,11 +46,6 @@ services:
     volumes:
       - /srv/homelab/appdata/qbittorrent:/config
       - /srv/media:/data
-
-    ports:
-      - "8081:8081"
-      - "6881:6881"
-      - "6881:6881/udp"
 
     restart: unless-stopped
 
@@ -53,5 +81,44 @@ services:
 
     ports:
       - "7878:7878"
+
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Budapest
+
+    volumes:
+      - /srv/homelab/appdata/sonarr:/config
+      - /srv/media:/data
+
+    ports:
+      - "8989:8989"
+
+    restart: unless-stopped
+
+
+  qbit-port-sync:
+    image: alpine:latest
+    container_name: qbit-port-sync
+
+    network_mode: "service:gluetun"
+
+    depends_on:
+      gluetun:
+        condition: service_started
+      qbittorrent:
+        condition: service_started
+
+    volumes:
+      - /srv/homelab/appdata/gluetun/tmp:/tmp/gluetun:ro
+      - /srv/homelab/appdata/gluetun/update-qbit-port.sh:/update-qbit-port.sh:ro
+
+    command: /bin/sh /update-qbit-port.sh
 
     restart: unless-stopped

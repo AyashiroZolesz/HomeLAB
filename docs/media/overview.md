@@ -2,39 +2,40 @@
 
 ## Purpose
 
-The HomeLAB media stack automates movie discovery, downloading, organization, and playback while keeping the system modular, reproducible, and easy to maintain.
-
-Each service has a single responsibility and communicates with the others through Docker networking.
+The HomeLAB media stack automates movie and TV series discovery, downloading, organization, seeding, and playback.
 
 ---
 
 ## Architecture
 
 ```text
-                nCore
-                  │
-                  ▼
-             Prowlarr
-                  │
-                  ▼
-              Radarr
-                  │
-                  ▼
-          qBittorrent
-                  │
-                  ▼
-     /data/downloads/complete
-                  │
-          Hardlink Import
-                  │
-                  ▼
-          /data/movies
-                  │
-                  ▼
-             Jellyfin
-                  │
-                  ▼
-               End User
+                 Trackers
+                    │
+                    ▼
+                Prowlarr
+                /      \
+               ▼        ▼
+           Radarr      Sonarr
+               \        /
+                \      /
+                 ▼    ▼
+              qBittorrent
+                    │
+                    ▼
+                 Gluetun
+                    │
+                    ▼
+                Proton VPN
+
+Downloads:
+    /data/downloads
+        │
+        ├── hardlink ──► /data/movies
+        │
+        └── hardlink ──► /data/series
+                            │
+                            ▼
+                         Jellyfin
 ```
 
 ---
@@ -42,75 +43,81 @@ Each service has a single responsibility and communicates with the others throug
 ## Components
 
 | Component | Responsibility |
-|-----------|----------------|
+|---|---|
 | Prowlarr | Central indexer management |
 | Radarr | Movie automation |
-| qBittorrent | Torrent downloading and seeding |
+| Sonarr | TV series automation |
+| qBittorrent | Downloading and seeding |
+| Gluetun | Proton VPN network gateway |
+| qbit-port-sync | Dynamic Proton port synchronization |
 | Jellyfin | Media library and playback |
 
 ---
 
-## Design Principles
+## Storage
 
-The media stack follows these principles:
+All media-aware containers use the same filesystem mapping:
 
-- One responsibility per service.
-- Services communicate through Docker service names.
-- Runtime data is separated from configuration.
-- Configuration is version controlled.
-- Media is stored only once using hardlinks whenever possible.
-- Components can be replaced independently.
+```text
+/srv/media -> /data
+```
+
+Relevant directories:
+
+```text
+/data/downloads
+/data/movies
+/data/series
+```
+
+The shared `/data` filesystem layout allows Radarr and Sonarr to import completed downloads using hardlinks where possible.
 
 ---
 
-## Documentation
+## VPN Design
 
-Detailed documentation for each component is available separately.
+Only qBittorrent torrent traffic is routed through Proton VPN.
 
-| Document | Purpose |
-|----------|---------|
-| qbittorrent.md | Download client configuration |
-| prowlarr.md | Indexer management |
-| radarr.md | Movie automation |
-| hardlinks.md | Hardlink implementation and verification |
-| troubleshooting.md | Common issues and resolutions |
+Radarr, Sonarr, Prowlarr and Jellyfin remain on the normal HomeLAB network.
+
+qBittorrent shares the Gluetun network namespace.
+
+Proton port forwarding is synchronized to qBittorrent automatically by the `qbit-port-sync` sidecar.
 
 ---
 
 ## Current Status
 
-### Working
+Working:
 
-- Docker Compose media stack
-- Prowlarr
-- Radarr
-- qBittorrent
 - Jellyfin
-- nCore integration
-- Hardlink imports
-- Torrent seeding verification
-
-### Planned
-
+- qBittorrent
+- Gluetun
+- Proton VPN
+- Proton port forwarding
+- qbit-port-sync
+- Radarr
 - Sonarr
-- Bazarr
-- Jellyseerr
-- Discord notifications
-- Monitoring
-- Automated backups
+- Prowlarr
+- hardlink imports
+- private tracker integration
+- Tailscale remote access
+
+Planned:
+
+- Seerr
+- Sentinel integration
+- automated backups
+- expanded monitoring
 
 ---
 
-## Verification
+## Design Principles
 
-The complete movie workflow has been verified end-to-end:
-
-1. Search request sent from Radarr.
-2. Prowlarr queried the configured indexer.
-3. qBittorrent downloaded the selected release.
-4. Radarr imported the movie.
-5. Hardlink was successfully created.
-6. Jellyfin detected the movie.
-7. Torrent successfully returned to the **Seeding** state.
-
-This confirms that the complete media pipeline is functioning correctly.
+- One responsibility per service
+- Persistent configuration is separated from media
+- Shared filesystem layout enables hardlinks
+- Secrets are excluded from Git
+- Torrent traffic is isolated behind VPN
+- The rest of the media stack stays on the normal network
+- Documentation follows the deployed system

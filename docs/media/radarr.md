@@ -2,264 +2,156 @@
 
 ## Purpose
 
-Radarr is responsible for automating the complete movie management workflow.
+Radarr manages movie acquisition, organization and upgrades in the HomeLAB media stack.
 
-Its responsibilities include:
-
-- Managing the movie library.
-- Searching for releases.
-- Communicating with Prowlarr for indexers.
-- Sending downloads to qBittorrent.
-- Importing completed movies.
-- Organizing the media library.
-- Monitoring existing movies for upgrades.
+It works together with Prowlarr for indexers, qBittorrent for downloading, and Jellyfin for playback.
 
 ---
 
 ## Service Information
 
 | Property | Value |
-|----------|-------|
+|---|---|
 | Container | radarr |
 | Image | lscr.io/linuxserver/radarr |
 | Host Port | 7878 |
 | Compose Project | media |
 
----
-
-## Communication
-
-Radarr communicates with multiple services.
-
-### Prowlarr
-
-Purpose:
-
-- Receives configured indexers.
-- Performs searches through synchronized indexers.
-
-Docker address:
+Web interface:
 
 ```text
-http://prowlarr:9696
+http://192.168.31.10:7878
+```
+
+Persistent configuration:
+
+```text
+/srv/homelab/appdata/radarr
+```
+
+Media mount:
+
+```text
+/srv/media -> /data
 ```
 
 ---
 
-### qBittorrent
-
-Purpose:
-
-- Sends torrent downloads.
-- Tracks download progress.
-- Imports completed downloads.
-
-Docker address:
+## Integration
 
 ```text
-http://qbittorrent:8080
+Prowlarr
+   │
+   ▼
+Radarr
+   │
+   ▼
+qBittorrent
+   │
+   ▼
+/data/downloads
+   │
+Hardlink Import
+   │
+   ▼
+/data/movies
+   │
+   ▼
+Jellyfin
 ```
 
-Category:
+Prowlarr provides indexer access.
 
-```text
-radarr
-```
+qBittorrent handles downloading and seeding.
+
+Radarr monitors completed downloads and imports movies into the library.
+
+Jellyfin scans the resulting movie library for playback.
 
 ---
 
-## Root Folder
+## Storage
 
-Current library:
+Movie library:
 
 ```text
 /data/movies
 ```
 
-Movies imported by Radarr are stored here.
-
----
-
-## Download Workflow
-
-The verified workflow is:
+Downloads:
 
 ```text
-Movie Added
-      │
-      ▼
-Search
-      │
-      ▼
-Prowlarr
-      │
-      ▼
-Indexer
-      │
-      ▼
-qBittorrent
-      │
-      ▼
-Download Completed
-      │
-      ▼
-Hardlink Import
-      │
-      ▼
-Movie Library
-      │
-      ▼
-Jellyfin
+/data/downloads
 ```
+
+All media-aware containers use the common `/data` filesystem layout.
+
+This allows Radarr to create hardlinks instead of copying completed torrent data.
 
 ---
 
-## Import Method
+## Hardlink Imports
 
-Radarr imports completed downloads using hardlinks.
+Hardlinks allow:
 
-Advantages:
+- continued torrent seeding
+- organized movie files under `/data/movies`
+- no duplicate storage usage
+- fast imports
 
-- No duplicate storage.
-- Torrent keeps seeding.
-- Instant import.
-- Organized movie library.
+Hardlink operation has been verified on the deployed HomeLAB filesystem.
 
 ---
 
 ## Quality Profile
 
-Current profile:
+Current custom profile:
 
 ```text
-HD-1080p
+HUN 1080p
 ```
 
-Future improvements:
+Main policy:
 
-- Prefer Hungarian audio.
-- Prefer 5.1 audio.
-- Prefer H.264 when appropriate.
-- Introduce Custom Formats.
-- Automatic upgrades when a better release becomes available.
+- Hungarian audio preferred
+- 1080p preferred
+- 720p available as fallback
+- 2160p excluded
+- H.264 / x264 preferred through Custom Formats
+- unnecessary REMUX / 3D / 4K releases avoided
+
+The profile is intended to balance quality, compatibility and storage usage.
 
 ---
 
-## Docker Configuration
+## Network Design
 
-The container mounts:
+Radarr remains on the normal HomeLAB network.
 
-```text
-Host:
-/srv/media
+It is not routed through Proton VPN.
 
-Container:
-/data
-```
+qBittorrent torrent traffic is isolated behind Gluetun.
 
-Important paths:
+The qBittorrent WebUI is exposed through Gluetun on:
 
 ```text
-Movies:
-/data/movies
-
-Downloads:
-/data/downloads
+192.168.31.10:8081
 ```
 
-Using the same filesystem is required for hardlinks.
+The exact download-client endpoint configured inside Radarr is application configuration and should not be assumed from the Docker service name alone.
 
 ---
 
-## Health Checks
+## Current Status
 
-During implementation the following warning appeared:
+Radarr is deployed and running as part of the media Compose stack.
 
-```text
-Downloads directory does not exist inside the container.
-```
+Current functionality includes:
 
-Cause:
-
-The qBittorrent configuration still referenced the old download paths.
-
-Resolution:
-
-- Updated qBittorrent paths.
-- Restarted qBittorrent.
-- Removed stale torrent entries.
-- Refreshed monitored downloads.
-- Verified container mounts.
-
-The warning disappeared after the migration.
-
----
-
-## Verification
-
-The workflow was verified with:
-
-```text
-We Live in Time (2024)
-```
-
-Successful verification included:
-
-- Search
-- Download
-- Import
-- Hardlink creation
-- Jellyfin detection
-- Torrent returned to Seeding
-
----
-
-## Lessons Learned
-
-### Docker paths matter
-
-Applications must always use container paths.
-
-Correct:
-
-```text
-/data/movies
-```
-
-Incorrect:
-
-```text
-/srv/media/movies
-```
-
----
-
-### Docker service names
-
-Services communicate using Docker DNS.
-
-Example:
-
-```text
-qbittorrent
-```
-
-instead of fixed IP addresses.
-
----
-
-### Health warnings are useful
-
-The health page immediately highlighted the path mismatch between Radarr and qBittorrent.
-
-Checking Health should always be part of deployment verification.
-
----
-
-## Related Documentation
-
-- overview.md
-- prowlarr.md
-- qbittorrent.md
-- hardlinks.md
-- troubleshooting.md
+- movie management
+- Prowlarr integration
+- qBittorrent download handling
+- hardlink imports
+- custom `HUN 1080p` quality policy
+- Jellyfin movie library integration
+- private tracker usage

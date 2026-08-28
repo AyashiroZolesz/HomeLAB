@@ -1,95 +1,89 @@
 # HomeLAB
 
-Personal self-hosted infrastructure project.
+Personal self-hosted infrastructure and learning project.
+
+The goal is to build a reproducible, documented and maintainable home infrastructure while learning Linux, Docker, networking, storage, automation and operations.
 
 ---
 
-## Goals
+## Current Platform
 
-- Learn Linux
-- Learn Docker
-- Learn Networking
-- Learn DevOps
-- Build a reproducible infrastructure
-- Document every decision and lesson learned
-
----
-
-## Current stack
+### Main HomeLAB
 
 - Debian 13
 - Docker Engine
 - Docker Compose
 - UFW
-- Portainer
-- Nginx (learning project)
-- Jellyfin
-
----
-
-## Services
-
-| Service | Status | Port |
-|----------|--------|------|
-| Portainer | ✅ Running | 9443 |
-| Nginx | ✅ Running | 8080 |
-| Jellyfin | ✅ Running | 8096 |
-
----
-
-## Hardware
-
+- Tailscale
 - Toshiba Satellite L750D
 - AMD A6-3400M
 - 8 GB RAM
 - 120 GB SSD
 - 500 GB HDD
 
----
+### Sentinel Node
 
-## Project structure
+- Raspberry Pi 3 class hardware
+- Debian 13
+- ARM64 / Cortex-A53
+- ~1 GB RAM
+- Ethernet: `192.168.31.11`
+- Tailscale enabled
+- Sentinel monitoring project under development
 
-```text
-/srv/homelab
-├── appdata/
-├── backups/
-├── compose/
-│   ├── jellyfin/
-│   ├── nginx/
-│   └── portainer/
-├── docs/
-├── scripts/
-└── web/
-```
-
----
-
-## Git rules
-
-Git stores only:
-
-- Infrastructure
-- Configuration
-- Documentation
-- Scripts
-
-Git does **not** store:
-
-- Runtime application data (`appdata/`)
-- Logs
-- Cache
-- Temporary files
 ---
 
 ## Current Services
 
-| Service | Status | Purpose |
-|---|---|---|
-| Portainer | Running | Docker container management |
-| Jellyfin | Running | Media server |
-| qBittorrent | Running | Download client |
+| Service | Purpose | Port |
+|---|---|---:|
+| Jellyfin | Media playback | 8096 |
+| qBittorrent | Download client | 8081 |
+| Gluetun | Proton VPN gateway for qBittorrent | internal |
+| qbit-port-sync | Proton forwarded-port synchronization | internal |
+| Radarr | Movie automation | 7878 |
+| Sonarr | Series automation | 8989 |
+| Prowlarr | Indexer management | 9696 |
+| Portainer | Docker management | 9443 |
+| Nginx | Web / learning service | 8080 |
 
-## Media Directory Structure
+Planned:
+
+- Seerr request management
+- Sentinel automated diagnostics and recovery
+- Telegram notifications
+
+---
+
+## Media Architecture
+
+```text
+Trackers
+   │
+   ▼
+Prowlarr
+   │
+   ├──────────► Radarr ─────► Movies
+   │
+   └──────────► Sonarr ─────► Series
+                        │
+                        ▼
+                  qBittorrent
+                        │
+                        ▼
+                     Gluetun
+                        │
+                        ▼
+                  Proton VPN
+```
+
+Only qBittorrent torrent traffic is routed through Proton VPN.
+
+Radarr, Sonarr, Prowlarr and Jellyfin remain on the normal HomeLAB network.
+
+---
+
+## Media Storage
 
 ```text
 /srv/media/
@@ -100,16 +94,99 @@ Git does **not** store:
 └── series/
 ```
 
-## Documentation
+Radarr and Sonarr use hardlinks where possible so downloaded media can remain available for seeding without consuming duplicate disk space.
+
+---
+
+## Sentinel
+
+The Raspberry Pi is being developed as an independent monitoring, diagnostics and recovery node.
+
+Target flow:
+
+```text
+check
+  ↓
+confirm
+  ↓
+diagnose
+  ↓
+safe recovery
+  ↓
+verify
+  ↓
+notify
+```
+
+Current implementation:
+
+- HomeLAB ping check
+- SSH connectivity check
+- HTTP service checks
+- Dedicated Sentinel SSH key
+- Dedicated `sentinel` account on HomeLAB
+- Restricted read-only sudo permissions
+
+Planned Sentinel features:
+
+- Docker container state monitoring
+- disk / RAM / load monitoring
+- Gluetun and Proton VPN validation
+- qBittorrent forwarded-port validation
+- automated recovery with bounded retries
+- Telegram notifications
+- incident history
+- log rotation
+
+---
+
+## Repository Structure
+
+```text
+/srv/homelab
+├── appdata/
+├── backups/
+├── compose/
+│   ├── jellyfin/
+│   ├── media/
+│   ├── nginx/
+│   └── portainer/
+├── docs/
+│   ├── media/
+│   └── monitoring/
+├── scripts/
+└── web/
+```
+
+---
+
+## Git Policy
+
+Git stores:
+
+- infrastructure configuration
+- Docker Compose definitions
+- scripts
+- documentation
+
+Git does not store:
+
+- runtime application data
+- logs
+- credentials
+- API keys
+- VPN private keys
+- generated caches
+- local rollback copies
+
+---
 
 ## Documentation
 
-Detailed project documentation is available in the `docs/` directory.
+Detailed technical documentation is maintained under:
 
-| Location | Description | Status |
-|----------|-------------|--------|
-| `docs/README.md` | Documentation index | ✅ |
-| `docs/media/` | Media stack documentation | ✅ |
-| `docs/docker/` | Docker documentation | 🚧 Planned |
-| `docs/networking/` | Home network documentation | 🚧 Planned |
-| `docs/monitoring/` | Monitoring documentation | 🚧 Planned |
+```text
+docs/
+```
+
+The documentation is part of the implementation process and should follow the real deployed system closely enough that the environment can be understood and rebuilt without relying on memory.
