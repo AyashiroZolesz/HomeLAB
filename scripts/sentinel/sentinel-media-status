@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -u
+
+FORWARDED_FILE="/srv/homelab/appdata/gluetun/tmp/forwarded_port"
+
+echo "FORWARDED_PORT=$(cat "$FORWARDED_FILE" 2>/dev/null || true)"
+
+echo "QBIT_LISTENERS_BEGIN"
+/usr/bin/docker exec qbittorrent \
+    netstat -lntup 2>/dev/null \
+    | grep -E '10\.2\.0\.2:' || true
+echo "QBIT_LISTENERS_END"

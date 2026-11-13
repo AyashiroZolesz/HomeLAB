@@ -2,6 +2,8 @@
 
 This document collects real issues encountered during the HomeLAB media stack deployment and the solutions that resolved them.
 
+The resolution examples below are historical deployment notes. The **2026-11-13** survey was read-only and did not repeat their stop, edit, remove or restart steps. Current network caveats are recorded below; application and recovery checks still need separate execution.
+
 ---
 
 # Radarr Health Warning
@@ -205,21 +207,32 @@ Using:
 localhost
 ```
 
-inside a container.
+inside a container when the intended destination is in a different network namespace. Containers sharing a network namespace are an exception: their loopback interface is shared.
 
 ---
 
 ## Resolution
 
-Always use Docker service names.
+Check both the source container's network and the destination's network namespace before choosing an endpoint.
 
-Example:
+- Radarr, Sonarr and Prowlarr normally communicate through their shared media Docker network.
+- qBittorrent and qbit-port-sync share Gluetun's network namespace. Do not assume that qBittorrent has an independent Docker DNS endpoint.
+- The port-sync script deliberately calls `127.0.0.1:8081` within that shared namespace.
+- A client using the published LAN WebUI reaches `192.168.31.10:8081` through Gluetun.
 
-```text
-qbittorrent
-radarr
-prowlarr
-```
+The saved download-client URL is application configuration; changing a Compose service name alone does not establish that URL. See [qBittorrent](qbittorrent.md) and [VPN](vpn.md).
+
+## Docker and UFW
+
+The survey found published Docker ports listening on all host addresses while UFW used an incoming-deny default. That default does not establish that the published ports are filtered: Docker's forwarding rules can divert traffic before UFW's rules apply. Router forwarding and Internet-facing reachability were not checked.
+
+Review allowed and denied access paths explicitly, including IPv6, before changing firewall rules. See the [Docker firewall documentation](https://docs.docker.com/engine/network/packet-filtering-firewalls/).
+
+## Sentinel Success and Application Health
+
+The imported runner returns zero after recording an application state, including `DEGRADED`. A successful systemd result therefore establishes that the runner finished, not that every check passed.
+
+The basic HTTP check accepts any received HTTP status. A `500` response can pass that reachability check. The container check also accepts running containers without a healthcheck. Neither result proves a complete media workflow.
 
 ---
 
@@ -235,6 +248,11 @@ After every deployment verify:
 - [ ] Hardlinks verified
 - [ ] Jellyfin imports movies
 - [ ] Torrent returns to Seeding
+- [ ] Seerr can submit a request through the intended Radarr/Sonarr integration
+- [ ] VPN exit routing and forwarded-port synchronization are checked separately
+- [ ] Any approved recovery action is followed by functional checks
+
+The 2026-11-13 survey established six responding media HTTP roots, container/mount metadata and an active Sentinel timer. It did not complete this deployment checklist.
 
 ---
 

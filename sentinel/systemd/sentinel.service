@@ -1,0 +1,11 @@
+[Unit]
+Description=HomeLAB Sentinel health check
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=zolesz
+ExecStart=/opt/sentinel/venv/bin/python /opt/sentinel/src/runner.py
+WorkingDirectory=/opt/sentinel
+EnvironmentFile=/etc/sentinel/telegram.env

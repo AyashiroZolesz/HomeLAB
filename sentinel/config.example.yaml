@@ -1,0 +1,17 @@
+# Schema used by src/checks/basic.py; live configuration was not copied.
+# The other checks currently keep their SSH destination and key path in source.
+homelab:
+  host: 192.168.31.10
+  ssh_port: 22
+
+services:
+  jellyfin:
+    url: "http://192.168.31.10:8096"
+  qbittorrent:
+    url: "http://192.168.31.10:8081"
+  radarr:
+    url: "http://192.168.31.10:7878"
+  sonarr:
+    url: "http://192.168.31.10:8989"
+  prowlarr:
+    url: "http://192.168.31.10:9696"

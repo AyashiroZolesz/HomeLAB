@@ -2,7 +2,9 @@
 
 Detailed technical documentation for the HomeLAB project.
 
-The root `README.md` provides a high-level overview. This directory contains implementation details, architecture, operational procedures, troubleshooting notes, and learning documentation.
+The [root README](../README.md) provides the platform, network and service inventory. This directory contains implementation details, troubleshooting notes and learning documentation.
+
+The current read-only deployment survey is dated **2026-11-13**. Survey observations and earlier deployment tests are identified separately. Older examples do not establish the current outcome of an application workflow.
 
 ---
 
@@ -10,14 +12,14 @@ The root `README.md` provides a high-level overview. This directory contains imp
 
 | Document | Description | Status |
 |---|---|---|
-| `media/overview.md` | Complete media stack architecture and workflow | ✅ |
-| `media/qbittorrent.md` | qBittorrent configuration and seeding | ✅ |
-| `media/vpn.md` | Proton VPN, Gluetun and port forwarding | ✅ |
-| `media/prowlarr.md` | Indexer management | ✅ |
-| `media/radarr.md` | Movie automation | ✅ |
-| `media/sonarr.md` | Series automation | ✅ |
-| `media/hardlinks.md` | Hardlink design and verification | ✅ |
-| `media/troubleshooting.md` | Real deployment issues and fixes | ✅ |
+| [Overview](media/overview.md) | Seerr, media architecture, runtime mounts and verification limits | Survey updated |
+| [qBittorrent](media/qbittorrent.md) | WebUI access through Gluetun, storage and seeding | Survey updated |
+| [VPN](media/vpn.md) | Proton VPN, Gluetun and port synchronization | Survey updated |
+| [Prowlarr](media/prowlarr.md) | Indexer management | Deployment notes |
+| [Radarr](media/radarr.md) | Movie automation | Deployment notes |
+| [Sonarr](media/sonarr.md) | Series automation | Deployment notes |
+| [Hardlinks](media/hardlinks.md) | Hardlink design and earlier verification | Historical test evidence |
+| [Troubleshooting](media/troubleshooting.md) | Earlier issues and current network caveats | Survey updated |
 
 ---
 
@@ -25,29 +27,27 @@ The root `README.md` provides a high-level overview. This directory contains imp
 
 | Document | Description | Status |
 |---|---|---|
-| `monitoring/sentinel-overview.md` | Raspberry Pi Sentinel architecture and roadmap | 🚧 Active |
-| `monitoring/security.md` | Sentinel SSH and privilege model | 🚧 Active |
+| [Sentinel overview](monitoring/sentinel-overview.md) | Pi runtime, source layout and remaining verification | Source and runtime reviewed |
+| [Sentinel security](monitoring/security.md) | Observed diagnostic and recovery permissions | Survey updated |
 
 ---
 
 ## Networking
 
-Planned documentation:
-
-- Home network architecture
-- Tailscale remote access
-- router and switching layout
+The [root inventory](../README.md#network) records the owner-confirmed router/switch models and the observed node roles. Router settings, Internet-facing access, subnet routing and exit-node operation remain unverified.
 
 ---
 
 ## Docker
 
-Planned documentation:
+Further documentation and verification:
 
 - Docker Compose workflow
 - bind mounts and persistent application data
 - Docker networking
 - deployment and rollback practices
+
+The current source refresh does not change the running services. Backup infrastructure, DNS filtering and automated hardware migration are deferred. A tested application restore procedure is still needed.
 
 ---
 

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+set -euo pipefail
+
+COMPOSE_DIR="/srv/homelab/compose/media"
+
+if [ "${1:-}" != "vpn-stack" ]; then
+    echo "Unsupported recovery action"
+    exit 2
+fi
+
+cd "$COMPOSE_DIR"
+
+echo "ACTION=restart_gluetun"
+/usr/bin/docker compose restart gluetun
+
+echo "ACTION=wait_for_gluetun"
+
+healthy=0
+
+for i in $(seq 1 12); do
+    status=$(
+        /usr/bin/docker inspect \
+            --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' \
+            gluetun 2>/dev/null || true
+    )
+
+    echo "GLUETUN_STATUS=$status"
+
+    if [ "$status" = "healthy" ]; then
+        healthy=1
+        break
+    fi
+
+    sleep 5
+done
+
+if [ "$healthy" -ne 1 ]; then
+    echo "RESULT=gluetun_not_healthy"
+    exit 1
+fi
+
+echo "ACTION=restart_dependents"
+/usr/bin/docker compose restart qbittorrent qbit-port-sync
+
+sleep 5
+
+echo "RESULT=recovery_completed"

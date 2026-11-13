@@ -4,6 +4,13 @@ Personal self-hosted infrastructure and learning project.
 
 The goal is to build a reproducible, documented and maintainable home infrastructure while learning Linux, Docker, networking, storage, automation and operations.
 
+Deployment survey: **2026-11-13**. The owner ran read-only commands on both nodes; the results were reviewed against the repository. Hardware details for the main host were confirmed unchanged by the owner. A running container or an HTTP response does not establish that an entire application workflow passes.
+
+- [Media architecture and storage](docs/media/overview.md)
+- [Sentinel runtime and source layout](docs/monitoring/sentinel-overview.md)
+- [Sentinel access and security](docs/monitoring/security.md)
+- [Documentation index](docs/README.md)
+
 ---
 
 ## Current Platform
@@ -14,7 +21,6 @@ The goal is to build a reproducible, documented and maintainable home infrastruc
 - Docker Engine
 - Docker Compose
 - UFW
-- Tailscale
 - Toshiba Satellite L750D
 - AMD A6-3400M
 - 8 GB RAM
@@ -23,13 +29,29 @@ The goal is to build a reproducible, documented and maintainable home infrastruc
 
 ### Sentinel Node
 
-- Raspberry Pi 3 class hardware
+- Raspberry Pi 3 Model B Rev 1.2
 - Debian 13
 - ARM64 / Cortex-A53
 - ~1 GB RAM
 - Ethernet: `192.168.31.11`
 - Tailscale enabled
 - Sentinel monitoring project under development
+
+### Network
+
+The owner confirmed a Xiaomi BE3600 router with a Mercusys MS108G switch behind it. Router configuration, port forwarding and the exact switch-port layout were not inspected.
+
+```mermaid
+flowchart LR
+    Router["Xiaomi BE3600 router"] --- Switch["Mercusys MS108G switch"]
+    LAN["Home LAN"] --- Main["homelab: Docker and media storage"]
+    LAN --- Pi["homelab-pi: Sentinel"]
+    Router --- LAN
+    Pi --- Tailnet["Tailscale and MagicDNS"]
+    Pi -. "Monitoring and SSH access" .-> Main
+```
+
+The Pi has active Ethernet and Wi-Fi connections; Ethernet currently has the preferred default route. Tailscale and MagicDNS were observed on the Pi. No Tailscale CLI or interface was found on the main host during the survey. Remote access to the main host through the Pi, subnet routing and exit-node operation remain unverified.
 
 ---
 
@@ -43,43 +65,34 @@ The goal is to build a reproducible, documented and maintainable home infrastruc
 | qbit-port-sync | Proton forwarded-port synchronization | internal |
 | Radarr | Movie automation | 7878 |
 | Sonarr | Series automation | 8989 |
+| Seerr | Request management | 5055 |
 | Prowlarr | Indexer management | 9696 |
 | Portainer | Docker management | 9443 |
 | Nginx | Web / learning service | 8080 |
 
-Planned:
-
-- Seerr request management
-- Sentinel automated diagnostics and recovery
-- Telegram notifications
+Seerr was running and returned an HTTP redirect from the Pi. Its application integrations were not exercised during this survey.
 
 ---
 
 ## Media Architecture
 
-```text
-Trackers
-   │
-   ▼
-Prowlarr
-   │
-   ├──────────► Radarr ─────► Movies
-   │
-   └──────────► Sonarr ─────► Series
-                        │
-                        ▼
-                  qBittorrent
-                        │
-                        ▼
-                     Gluetun
-                        │
-                        ▼
-                  Proton VPN
+```mermaid
+flowchart LR
+    Seerr -. "Requests" .-> Managers["Radarr / Sonarr"]
+    Prowlarr -. "Indexers" .-> Managers
+    Managers -. "Download client" .-> Qbit["qBittorrent"]
+    Qbit -. "Network namespace" .-> Gluetun
+    Gluetun -.-> Proton["Proton VPN"]
+    Qbit --> Downloads["Downloads"]
+    Downloads -. "Import" .-> Libraries["Movies / series"]
+    Libraries --> Jellyfin
 ```
 
-Only qBittorrent torrent traffic is routed through Proton VPN.
+The media stack is configured to route qBittorrent torrent traffic through Proton VPN.
 
 Radarr, Sonarr, Prowlarr and Jellyfin remain on the normal HomeLAB network.
+
+This is the documented routing design. The survey inspected container status and selected network/mount metadata, without testing the VPN exit address or failure behavior. Seerr adds request management ahead of Radarr and Sonarr; the full request-to-playback flow remains a separate test.
 
 ---
 
@@ -95,6 +108,8 @@ Radarr, Sonarr, Prowlarr and Jellyfin remain on the normal HomeLAB network.
 ```
 
 Radarr and Sonarr use hardlinks where possible so downloaded media can remain available for seeding without consuming duplicate disk space.
+
+qBittorrent, Radarr and Sonarr mount `/srv/media` at `/data`. Jellyfin has separate read-only mounts for the movie and series libraries. Current hardlink identity was not retested; earlier verification is recorded in the [hardlink notes](docs/media/hardlinks.md).
 
 ---
 
@@ -118,34 +133,55 @@ verify
 notify
 ```
 
-Current implementation:
+Observed runtime:
+
+- `sentinel.timer` is active and invokes `sentinel.service` on a two-minute schedule.
+- The inspected service run exited with status zero. The imported runner deliberately returns zero after recording either `OK` or `DEGRADED`; individual check outcomes were not read from its state file.
+- The service runs as the Pi's administrative account. The current privilege model is described in the [security notes](docs/monitoring/security.md).
+- A current status file, incident log and Telegram environment file exist. Notification delivery was not tested.
+
+Implemented checks and access identified in the reviewed source:
 
 - HomeLAB ping check
 - SSH connectivity check
 - HTTP service checks
-- Dedicated Sentinel SSH key
+- disk/memory thresholds, container state and saved-port/listener comparisons
 - Dedicated `sentinel` account on HomeLAB
-- Restricted read-only sudo permissions
+- Diagnostic sudo commands plus an explicitly permitted `vpn-stack` recovery helper
 
-Planned Sentinel features:
+The source implements Telegram notifications on status transitions. Delivery was not tested, and the existing error handling has a credential-disclosure risk described in the security notes.
 
-- Docker container state monitoring
-- disk / RAM / load monitoring
-- Gluetun and Proton VPN validation
-- qBittorrent forwarded-port validation
-- automated recovery with bounded retries
-- Telegram notifications
-- incident history
-- log rotation
+Further verification and follow-up:
+
+- HTTP status interpretation, response parsing and Seerr monitoring coverage
+- actual VPN exit routing and external port reachability
+- recovery limits, failure confirmation and verification after recovery
+- Telegram delivery and incident-history behavior
+- log rotation and bounded local storage
 
 ---
 
-## Repository Structure
+## Configuration Sources
+
+| Area | Repository source | Observed runtime source |
+|---|---|---|
+| Media services, including Seerr | [Media Compose](compose/media/compose.yaml) | `/srv/homelab/compose/media/compose.yaml` |
+| Jellyfin | [Jellyfin Compose](compose/jellyfin/compose.yaml) | `/srv/homelab/compose/jellyfin/compose.yaml` |
+| Nginx | [Nginx Compose](compose/nginx/compose.yaml) | `/srv/homelab/compose/nginx/compose.yaml` |
+| Portainer | [Existing definition](compose/portainer/compose.yaml) | No Compose source label; deployment origin remains unverified |
+| Port synchronization | [Script](scripts/media/update-qbit-port.sh) | Existing script mounted from ignored runtime `appdata` |
+| Sentinel | [Runner](sentinel/src/runner.py), [dependencies](sentinel/requirements.txt), [units](sentinel/systemd/sentinel.service) | `/opt/sentinel` on the Pi, with configuration under `/etc/sentinel` |
+| Main-host diagnostics and recovery | [Status helper](scripts/sentinel/sentinel-media-status), [recovery helper](scripts/sentinel/sentinel-recover-media) | `/usr/local/sbin` on the main host |
+
+The imported source paths do not replace the deployed paths automatically. This collection records the current implementation, including deployment-specific settings and known limitations; it is not an automated installer.
+
+The separate `compose/qbittorrent/compose.yaml` and the tracked pre-migration media snapshot are historical configuration sources, not the active media project's source identified during this survey. Do not start them alongside the active media stack without reviewing their purpose and conflicts.
+
+## Runtime Layout
 
 ```text
 /srv/homelab
 ├── appdata/
-├── backups/
 ├── compose/
 │   ├── jellyfin/
 │   ├── media/
@@ -154,7 +190,6 @@ Planned Sentinel features:
 ├── docs/
 │   ├── media/
 │   └── monitoring/
-├── scripts/
 └── web/
 ```
 
@@ -177,7 +212,9 @@ Git does not store:
 - API keys
 - VPN private keys
 - generated caches
-- local rollback copies
+- new local rollback copies
+
+The existing tracked pre-migration Compose snapshot is retained as historical material. It is not the active media project's source.
 
 ---
 
@@ -190,3 +227,11 @@ docs/
 ```
 
 The documentation is part of the implementation process and should follow the real deployed system closely enough that the environment can be understood and rebuilt without relying on memory.
+
+## Verification and Deferred Work
+
+The Pi received HTTP responses from Jellyfin, qBittorrent, Radarr, Sonarr, Prowlarr and Seerr on 2026-11-13. Redirects were not followed. Docker reported Jellyfin and Gluetun as healthy. These observations do not replace application, VPN, recovery or notification tests.
+
+Backup infrastructure, DNS filtering and automated migration to replacement hardware are deferred. No HomeLAB application restore test was established by this survey; the presence of a package-database backup timer or a local configuration copy is not evidence of an application backup.
+
+Known follow-up areas are the Docker/UFW access boundary, Sentinel privileges and helper behavior, storage capacity monitoring, and versioned deployment/restore procedures. This repository refresh does not deploy changes to either node.

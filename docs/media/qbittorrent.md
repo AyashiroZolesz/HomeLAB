@@ -20,9 +20,19 @@ Its responsibilities are:
 |----------|-------|
 | Container | qbittorrent |
 | Image | lscr.io/linuxserver/qbittorrent |
-| Host Port | 8081 |
-| Internal Port | 8080 |
+| Host WebUI Port | 8081, published by Gluetun |
+| Network | Gluetun network namespace, shared with qbit-port-sync |
 | Compose Project | media |
+
+Survey date: **2026-11-13**. qBittorrent was running and its WebUI root returned HTTP `200` from the Pi. Authentication, current torrent state and application API integrations were not tested.
+
+## WebUI Access
+
+The active media stack owns qBittorrent; Gluetun publishes its WebUI on the host's port `8081`. qBittorrent does not have a separate published host port in the inspected runtime.
+
+For an application on the media Docker network, the configured endpoint must reach the shared Gluetun network namespace. Do not assume that qBittorrent has an independent Docker DNS endpoint. Confirm the configured WebUI listening port and network reachability before changing a download-client URL. A client using the LAN endpoint reaches `http://192.168.31.10:8081`.
+
+The separate `compose/qbittorrent/compose.yaml` is not the configuration source identified for the running media project.
 
 ---
 
@@ -51,13 +61,13 @@ Downloads remain inside the download directory even after Radarr imports the mov
 
 ## Download Categories
 
-Current category:
+The earlier deployment notes recorded this category:
 
 ```text
 radarr
 ```
 
-Planned categories:
+The documented intended categories are:
 
 ```text
 radarr
@@ -65,6 +75,8 @@ sonarr
 ```
 
 Categories allow multiple automation services to share the same download client.
+
+The current category configuration was not read during the survey. In particular, the presence of a running Sonarr container does not establish its download category or integration result.
 
 ---
 
@@ -87,7 +99,7 @@ Upload speed may remain **0 B/s** if no peers currently request data.
 
 ## Configuration
 
-Verified download paths:
+Previously documented download paths:
 
 ```text
 Default Save Path:
@@ -97,17 +109,21 @@ Incomplete Path:
 /data/downloads/incomplete
 ```
 
+The survey confirmed the `/srv/media -> /data` mount, without reading the saved application paths or credentials.
+
 ---
 
 ## Verification
 
-The configuration was verified by:
+The earlier deployment notes report verification by:
 
 - Downloading a movie through Radarr.
 - Importing it successfully.
 - Re-adding the torrent.
 - Running a hash check.
 - Returning to **Seeding** without downloading the movie again.
+
+These actions were not repeated on 2026-11-13. A new end-to-end check must also cover Sonarr/Seerr integration, the VPN exit path, forwarded-port synchronization and continued seeding after import.
 
 ---
 
@@ -140,7 +156,8 @@ The saved download paths inside qBittorrent must also match the new container pa
 
 ## Related Documentation
 
-- overview.md
-- radarr.md
-- hardlinks.md
-- troubleshooting.md
+- [Overview](overview.md)
+- [Radarr](radarr.md)
+- [Hardlinks](hardlinks.md)
+- [VPN and port synchronization](vpn.md)
+- [Troubleshooting](troubleshooting.md)

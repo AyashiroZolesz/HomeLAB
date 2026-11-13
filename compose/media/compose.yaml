@@ -102,6 +102,22 @@ services:
 
     restart: unless-stopped
 
+  seerr:
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    init: true
+
+    environment:
+      - TZ=Europe/Budapest
+      - PORT=5055
+
+    volumes:
+      - /srv/homelab/appdata/seerr:/app/config
+
+    ports:
+      - "5055:5055"
+
+    restart: unless-stopped
 
   qbit-port-sync:
     image: alpine:latest

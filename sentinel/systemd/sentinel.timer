@@ -1,0 +1,11 @@
+[Unit]
+Description=Run HomeLAB Sentinel every 2 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+AccuracySec=10s
+Persistent=true
+
+[Install]
+WantedBy=timers.target
