@@ -6,7 +6,10 @@ The goal is to build a reproducible, documented and maintainable home infrastruc
 
 Deployment survey: **2026-11-13**. The owner ran read-only commands on both nodes; the results were reviewed against the repository. Hardware details for the main host were confirmed unchanged by the owner. A running container or an HTTP response does not establish that an entire application workflow passes.
 
+Dashboard deployment and review: **2026-11-18**. Homarr runs on the main host with a dedicated Tailscale HTTPS endpoint, eight HomeLAB application tiles and six integrations. The [dashboard runbook](docs/dashboard/homarr.md) records the observed board, verification results and remaining manual checks.
+
 - [Media architecture and storage](docs/media/overview.md)
+- [Homarr dashboard and private access](docs/dashboard/homarr.md)
 - [Sentinel runtime and source layout](docs/monitoring/sentinel-overview.md)
 - [Sentinel access and security](docs/monitoring/security.md)
 - [Documentation index](docs/README.md)
@@ -51,7 +54,7 @@ flowchart LR
     Pi -. "Monitoring and SSH access" .-> Main
 ```
 
-The Pi has active Ethernet and Wi-Fi connections; Ethernet currently has the preferred default route. Tailscale and MagicDNS were observed on the Pi. No Tailscale CLI or interface was found on the main host during the survey. Remote access to the main host through the Pi, subnet routing and exit-node operation remain unverified.
+The Pi has active Ethernet and Wi-Fi connections; Ethernet had the preferred default route during the November 13 survey. On November 18, the owner's Tailscale client reported the Pi online and advertising `192.168.31.0/24`. The owner confirmed that Homarr and its Jellyfin link open on mobile data with Tailscale enabled; other remote application links were not tested. Homarr uses a separate userspace Tailscale container on the main host for private HTTPS at `homarr.tail39df36.ts.net`; enrollment, certificate verification and application-data checks are recorded in the [dashboard runbook](docs/dashboard/homarr.md). No host-wide Tailscale installation or exit-node change is part of this deployment.
 
 ---
 
@@ -69,6 +72,7 @@ The Pi has active Ethernet and Wi-Fi connections; Ethernet currently has the pre
 | Prowlarr | Indexer management | 9696 |
 | Portainer | Docker management | 9443 |
 | Nginx | Web / learning service | 8080 |
+| Homarr | Private HomeLAB dashboard, separate Tailscale HTTPS endpoint | no host port |
 
 Seerr was running and returned an HTTP redirect from the Pi. Its application integrations were not exercised during this survey.
 
@@ -168,6 +172,7 @@ Further verification and follow-up:
 | Media services, including Seerr | [Media Compose](compose/media/compose.yaml) | `/srv/homelab/compose/media/compose.yaml` |
 | Jellyfin | [Jellyfin Compose](compose/jellyfin/compose.yaml) | `/srv/homelab/compose/jellyfin/compose.yaml` |
 | Nginx | [Nginx Compose](compose/nginx/compose.yaml) | `/srv/homelab/compose/nginx/compose.yaml` |
+| Homarr | [Homarr Compose](compose/homarr/compose.yaml), [Serve](compose/homarr/tailscale/serve.json) | `/srv/homelab/compose/homarr`, separate appdata and Tailscale identity |
 | Portainer | [Existing definition](compose/portainer/compose.yaml) | No Compose source label; deployment origin remains unverified |
 | Port synchronization | [Script](scripts/media/update-qbit-port.sh) | Existing script mounted from ignored runtime `appdata` |
 | Sentinel | [Runner](sentinel/src/runner.py), [dependencies](sentinel/requirements.txt), [units](sentinel/systemd/sentinel.service) | `/opt/sentinel` on the Pi, with configuration under `/etc/sentinel` |

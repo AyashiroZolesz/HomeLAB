@@ -30,11 +30,17 @@ The current read-only deployment survey is dated **2026-11-13**. Survey observat
 | [Sentinel overview](monitoring/sentinel-overview.md) | Pi runtime, source layout and remaining verification | Source and runtime reviewed |
 | [Sentinel security](monitoring/security.md) | Observed diagnostic and recovery permissions | Survey updated |
 
+## Dashboard
+
+| Document | Description | Status |
+|---|---|---|
+| [Homarr](dashboard/homarr.md) | Private HTTPS, eight HomeLAB tiles, six integrations, deployment and restore | Deployed and reviewed; manual checks listed |
+
 ---
 
 ## Networking
 
-The [root inventory](../README.md#network) records the owner-confirmed router/switch models and the observed node roles. Router settings, Internet-facing access, subnet routing and exit-node operation remain unverified.
+The [root inventory](../README.md#network) records the owner-confirmed router/switch models and the observed node roles. The Pi's advertised subnet route was observed on November 18; the owner confirmed Homarr and Jellyfin access on mobile data with Tailscale enabled. Other remote application links, router settings and exit-node operation remain unverified. Homarr's dedicated private HTTPS endpoint is documented in the [dashboard runbook](dashboard/homarr.md).
 
 ---
 
@@ -47,7 +53,7 @@ Further documentation and verification:
 - Docker networking
 - deployment and rollback practices
 
-The current source refresh does not change the running services. Backup infrastructure, DNS filtering and automated hardware migration are deferred. A tested application restore procedure is still needed.
+The November 13 source refresh did not change running services. The November 18 Homarr deployment adds a separate Compose project; its current verification state is recorded in the dashboard runbook. Backup infrastructure, DNS filtering and automated hardware migration are deferred. A tested application restore procedure is still needed.
 
 ---
 

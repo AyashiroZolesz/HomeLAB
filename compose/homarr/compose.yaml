@@ -1,0 +1,48 @@
+services:
+  tailscale:
+    image: ghcr.io/tailscale/tailscale:v1.104.7
+    container_name: homarr-tailscale
+    hostname: homarr
+    environment:
+      TS_HOSTNAME: homarr
+      TS_USERSPACE: "true"
+      TS_AUTH_ONCE: "true"
+      TS_BOOT_TIMEOUT: 10m
+      TS_ACCEPT_DNS: "false"
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - /srv/homelab/appdata/homarr-tailscale:/var/lib/tailscale
+      - /srv/homelab/compose/homarr/tailscale:/config:ro
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:v2.13.1
+    container_name: homarr
+    network_mode: service:tailscale
+    depends_on:
+      tailscale:
+        condition: service_started
+        restart: true
+    environment:
+      TZ: Europe/Budapest
+      SECRET_ENCRYPTION_KEY: ${SECRET_ENCRYPTION_KEY:?Set the server-side Homarr encryption key}
+    volumes:
+      - /srv/homelab/appdata/homarr:/appdata
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:7575').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
